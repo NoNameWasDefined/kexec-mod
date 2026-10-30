@@ -19,7 +19,7 @@
 
 #include <linux/init.h>
 #include <linux/version.h>
-#include <linux/linkage.h>
+#include "compat-asm.h"
 #include <linux/irqchip/arm-gic-v3.h>
 
 #include <asm/assembler.h>
@@ -31,7 +31,7 @@
 	.text
 	.align 11
 
-ENTRY(__hyp_shim_vectors)
+SYM_CODE_START(__hyp_shim_vectors)
 	ventry	el2_sync_invalid		// Synchronous EL2t
 	ventry	el2_irq_invalid			// IRQ EL2t
 	ventry	el2_fiq_invalid			// FIQ EL2t
@@ -51,7 +51,7 @@ ENTRY(__hyp_shim_vectors)
 	ventry	el1_irq_invalid			// IRQ 32-bit EL1
 	ventry	el1_fiq_invalid			// FIQ 32-bit EL1
 	ventry	el1_error_invalid		// Error 32-bit EL1
-ENDPROC(__hyp_shim_vectors)
+SYM_CODE_END(__hyp_shim_vectors)
 
 	.align 11
 
@@ -84,12 +84,12 @@ el1_sync_shim:
 #endif
 
 9:	eret
-ENDPROC(el1_sync_shim)
+SYM_CODE_END(el1_sync_shim)
 
 .macro invalid_vector	label
 \label:
 	b \label
-ENDPROC(\label)
+SYM_CODE_END(\label)
 .endm
 
 	invalid_vector	el2_sync_invalid

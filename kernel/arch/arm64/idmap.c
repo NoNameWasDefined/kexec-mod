@@ -12,6 +12,7 @@
 #define MODULE_NAME "kexec_mod_arm64"
 #define pr_fmt(fmt) MODULE_NAME ": " fmt
 
+#include <linux/version.h>
 #include <asm/pgtable.h>
 #include <asm/mmu_context.h>
 
@@ -105,6 +106,9 @@ phys_addr_t kexec_pa_symbol(void *ptr)
 	unsigned long va = (unsigned long) ptr;
 	unsigned long page_offset;
 	pgd_t *pgd;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,12,0)
+	p4d_t *p4d;
+#endif
 	pud_t *pud;
 	pmd_t *pmd;
 	pte_t *ptep, pte;
@@ -115,7 +119,16 @@ phys_addr_t kexec_pa_symbol(void *ptr)
 		return 0;
 	}
 
-	pud = pud_offset(pgd , va);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,12,0)
+	p4d = p4d_offset(pgd, va);
+	if (p4d_none(*p4d) || p4d_bad(*p4d)) {
+		return 0;
+	}
+
+	pud = pud_offset(p4d, va);
+#else
+	pud = pud_offset(pgd, va);
+#endif
 	if (pud_none(*pud) || pud_bad(*pud)) {
 		return 0;
 	}

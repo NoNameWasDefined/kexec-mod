@@ -20,6 +20,8 @@
 #include <asm/uaccess.h>
 #include <asm/virt.h>
 
+#include "../../ksym.h"
+
 /* These kernel symbols need to be dynamically resolved at runtime
  * using kallsym due to them not being exposed to kernel modules */
 static void (*cpu_do_switch_mm_ptr)(unsigned long, struct mm_struct *);
@@ -69,12 +71,35 @@ static int __init_cpu_boot_mode(void)
 	 * Our approach is to decode the address to __boot_mode_cpu from the instructions
 	 * of set_cpu_boot_mode_flag which is exported and references __boot_mode_cpu.
 	 */
-	u32 *set_cpu_boot_mode_flag_ptr = (void *)kallsyms_lookup_name("set_cpu_boot_mode_flag");
-	void *page = (void *) (((u64)set_cpu_boot_mode_flag_ptr) & ~0xFFF);
-	u16 lo = (set_cpu_boot_mode_flag_ptr[0] >> 29) & 0x3;
-	u16 hi = (set_cpu_boot_mode_flag_ptr[0] >> 4) & 0xFFFF;
-	u16 off = (set_cpu_boot_mode_flag_ptr[1] >> 10) & 0xFFF;
-	u32 *__boot_cpu_mode_ptr = page + ((hi << 13) | (lo << 12)) + off;
+	u32 *set_cpu_boot_mode_flag_ptr = (void *)kexec_kallsyms_lookup_name("set_cpu_boot_mode_flag");
+	u32 *adrp_ptr = NULL;
+	void *page;
+	u16 lo, hi, off;
+	u32 *__boot_cpu_mode_ptr;
+	int i;
+
+	if (!set_cpu_boot_mode_flag_ptr)
+		return -1;
+
+	/*
+	 * Kernels built with BTI (5.10+) start the function with a "bti c"
+	 * landing pad, so look for the ADRP in the first few instructions.
+	 * It must be followed by the ADD holding the page offset.
+	 */
+	for (i = 0; i < 4; i++) {
+		if ((set_cpu_boot_mode_flag_ptr[i] & 0x9f000000) == 0x90000000) {
+			adrp_ptr = &set_cpu_boot_mode_flag_ptr[i];
+			break;
+		}
+	}
+	if (!adrp_ptr)
+		return -1;
+
+	page = (void *) (((u64)adrp_ptr) & ~0xFFF);
+	lo = (adrp_ptr[0] >> 29) & 0x3;
+	hi = (adrp_ptr[0] >> 4) & 0xFFFF;
+	off = (adrp_ptr[1] >> 10) & 0xFFF;
+	__boot_cpu_mode_ptr = page + ((hi << 13) | (lo << 12)) + off;
 
 	/* Verify whether address actually exists */
 	if (kexec_pa_symbol(__boot_cpu_mode_ptr)) {
@@ -129,15 +154,15 @@ static void __init_mm(void)
 	 * However, we can find its physical address in the TTBR1_EL1 register
 	 * and convert it to a logical address.
 	 */
-	u32 val;
+	u64 val;
 	asm volatile("mrs %0, ttbr1_el1" : "=r" (val));
-	init_mm.pgd = phys_to_virt(val);
+	init_mm.pgd = phys_to_virt(val & GENMASK_ULL(47, 12));
 }
 
 
 static void *ksym(const char *name)
 {
-	return (void *) kallsyms_lookup_name(name);
+	return (void *) kexec_kallsyms_lookup_name(name);
 }
 
 int machine_kexec_compat_load(int detect_el2, int shim_hyp)

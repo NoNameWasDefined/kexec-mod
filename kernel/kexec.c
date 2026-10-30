@@ -8,6 +8,7 @@
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
+#include <linux/version.h>
 #include <linux/capability.h>
 #include <linux/mm.h>
 #include <linux/file.h>
@@ -169,7 +170,11 @@ static inline int kexec_load_check(unsigned long nr_segments,
 		return -EPERM;
 
 	/* Permit LSMs and IMA to fail the kexec */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,8,0)
+	result = security_kernel_load_data(LOADING_KEXEC_IMAGE, false);
+#else
 	result = security_kernel_load_data(LOADING_KEXEC_IMAGE);
+#endif
 	if (result < 0)
 		return result;
 

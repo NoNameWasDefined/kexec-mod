@@ -20,6 +20,11 @@ via `/dev/kexec`.
 Make sure you have installed the necessary packages for building Linux kernel
 modules on your system (e.g., `make` and `gcc`).
 
+Linux 5.7 and later no longer export `kallsyms_lookup_name()`, so on those
+kernels the module resolves it through a temporary kprobe: the host kernel needs
+`CONFIG_KPROBES=y`. The arm64 identity mapping assumes 3 translation levels
+(`CONFIG_ARM64_VA_BITS=39` with 4K pages).
+
 ### Kernel module
 Enter the `kernel` directory and export the path to the Linux kernel sources
 against you wish to build:

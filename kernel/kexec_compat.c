@@ -21,6 +21,7 @@
 #include <asm/virt.h>
 
 #include "kexec_compat.h"
+#include "ksym.h"
 
 /* These kernel symbols need to be dynamically resolved at runtime
  * using kallsym due to them not being exposed to kernel modules */
@@ -51,10 +52,10 @@ void cpu_hotplug_enable(void)
 
 static void *ksym(const char *name)
 {
-	return (void *)kallsyms_lookup_name(name);
+	return (void *)kexec_kallsyms_lookup_name(name);
 }
 
-int kexec_compat_load()
+int kexec_compat_load(void)
 {
 	if (!(machine_shutdown_ptr = ksym("machine_shutdown"))
 	    || !(migrate_to_reboot_cpu_ptr = ksym("migrate_to_reboot_cpu"))

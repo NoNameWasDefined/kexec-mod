@@ -10,7 +10,8 @@
  * published by the Free Software Foundation.
  */
 
-#include <linux/linkage.h>
+#include <linux/version.h>
+#include "compat-asm.h"
 #include <asm/assembler.h>
 #include <asm/sysreg.h>
 #include <asm/virt.h>
@@ -31,11 +32,14 @@
  * branch to what would be the reset vector. It must be executed with the
  * flat identity mapping.
  */
-ENTRY(__cpu_soft_restart)
+SYM_FUNC_START(__cpu_soft_restart)
 	/* Clear sctlr_el1 flags. */
 	mrs	x12, sctlr_el1
-	ldr	x13, =SCTLR_ELx_FLAGS
+	mov_q	x13, SCTLR_ELx_FLAGS
 	bic	x12, x12, x13
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,10,0)
+	pre_disable_mmu_workaround
+#endif
 	msr	sctlr_el1, x12
 	isb
 
@@ -54,4 +58,4 @@ ENTRY(__cpu_soft_restart)
 	mov	x1, x3				// arg1
 	mov	x2, x4				// arg2
 	br	x8
-ENDPROC(__cpu_soft_restart)
+SYM_FUNC_END(__cpu_soft_restart)

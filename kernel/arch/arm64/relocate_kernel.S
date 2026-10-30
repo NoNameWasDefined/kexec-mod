@@ -10,7 +10,7 @@
  */
 
 #include <linux/kexec.h>
-#include <linux/linkage.h>
+#include "compat-asm.h"
 
 #include <asm/assembler.h>
 #include <asm/kexec.h>
@@ -29,7 +29,7 @@
  * control_code_page, a special page which has been set up to be preserved
  * during the copy operation.
  */
-ENTRY(arm64_relocate_new_kernel)
+SYM_FUNC_START(arm64_relocate_new_kernel)
 
 	/* Setup the list loop variables. */
 	mov	x17, x1				/* x17 = kimage_start */
@@ -113,7 +113,7 @@ ENTRY(arm64_relocate_new_kernel)
 	mov	x3, xzr
 	br	x17
 
-ENDPROC(arm64_relocate_new_kernel)
+SYM_FUNC_END(arm64_relocate_new_kernel)
 
 .ltorg
 
